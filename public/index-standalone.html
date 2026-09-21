@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cổng Nộp Bài Đội Tuyển HSG Tin Học</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    }
+    code, pre, .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen pb-12">
+
+  <!-- Header / Navigation Bar -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-sm">
+          <i data-lucide="code-xml" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold text-slate-900 tracking-tight leading-none">
+            Cổng Nộp Bài Đội Tuyển HSG
+          </h1>
+          <p class="text-xs text-slate-500 mt-0.5">Bồi dưỡng Học sinh giỏi Tin học &amp; Lập trình thi đấu</p>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-2">
+        <div id="statusBadge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+          <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+          <span id="statusText">Chế độ Thử nghiệm (Chưa cấu hình Firebase)</span>
+        </div>
+        <button id="btnOpenRulesModal" class="text-xs font-medium text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1">
+          <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+          <span>Hướng dẫn Rules &amp; CORS</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 pt-8">
+    
+    <!-- Banner thông báo khi chưa gắn API Key -->
+    <div id="demoNotice" class="mb-6 p-4 rounded-xl bg-amber-50/80 border border-amber-200 text-amber-900 text-sm flex items-start gap-3">
+      <i data-lucide="alert-circle" class="w-5 h-5 text-amber-600 shrink-0 mt-0.5"></i>
+      <div class="flex-1">
+        <div class="font-semibold mb-0.5">Lưu ý về cấu hình Firebase:</div>
+        <p class="text-xs leading-relaxed text-amber-800">
+          Hiện tại file đang sử dụng biến <code class="bg-amber-100 px-1 py-0.5 rounded font-mono">firebaseConfig</code> mặc định.
+          Hệ thống sẽ lưu tạm thời trên trình duyệt để bạn thử nghiệm đầy đủ giao diện.
+          Để kết nối thật tới Cloud Firestore và Storage, hãy mở file này bằng trình soạn thảo (Notepad/VS Code) và dán thông tin từ Firebase Console vào mục <strong class="font-mono">firebaseConfig</strong>.
+        </p>
+      </div>
+    </div>
+
+    <!-- Grid Layout 2 Cột: Form Nộp Bài & Danh Sách Gần Đây -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      
+      <!-- CỘT TRÁI: FORM NỘP BÀI (5 columns) -->
+      <section class="lg:col-span-5">
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
+          
+          <div class="flex items-center justify-between pb-4 mb-5 border-b border-slate-100">
+            <div>
+              <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <i data-lucide="upload-cloud" class="w-5 h-5 text-indigo-600"></i>
+                Biểu Mẫu Nộp Bài
+              </h2>
+              <p class="text-xs text-slate-500 mt-0.5">Học sinh điền thông tin và tải lên mã nguồn bài giải</p>
+            </div>
+          </div>
+
+          <!-- Thông báo Thành công / Thất bại -->
+          <div id="alertBox" class="hidden mb-5 p-4 rounded-xl text-sm border flex items-start gap-3">
+            <i id="alertIcon" class="w-5 h-5 shrink-0 mt-0.5"></i>
+            <div class="flex-1">
+              <h4 id="alertTitle" class="font-semibold text-sm"></h4>
+              <p id="alertMessage" class="text-xs mt-0.5 leading-relaxed"></p>
+            </div>
+            <button type="button" id="alertClose" class="text-slate-400 hover:text-slate-600">
+              <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+          <!-- Form chính -->
+          <form id="submissionForm" class="space-y-4">
+            
+            <!-- Trường 1: Họ và tên học sinh -->
+            <div>
+              <label for="studentName" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                Họ và tên học sinh <span class="text-rose-500">*</span>
+              </label>
+              <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <i data-lucide="user" class="w-4 h-4"></i>
+                </div>
+                <input 
+                  type="text" 
+                  id="studentName" 
+                  name="studentName" 
+                  required 
+                  placeholder="VD: Nguyễn Văn Nam - Lớp 11 Tin"
+                  class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                >
+              </div>
+            </div>
+
+            <!-- Trường 2: Ngày và giờ nộp (Mặc định thời điểm hiện tại) -->
+            <div>
+              <label for="submittedAt" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                Thời gian nộp <span class="text-rose-500">*</span>
+              </label>
+              <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <i data-lucide="calendar" class="w-4 h-4"></i>
+                </div>
+                <input 
+                  type="datetime-local" 
+                  id="submittedAt" 
+                  name="submittedAt" 
+                  required
+                  class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                >
+              </div>
+            </div>
+
+            <!-- Trường 3: Tên bài tập -->
+            <div>
+              <label for="exerciseInput" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                Tên bài tập <span class="text-rose-500">*</span>
+              </label>
+              <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <i data-lucide="book-open" class="w-4 h-4"></i>
+                </div>
+                <input 
+                  type="text" 
+                  id="exerciseInput" 
+                  name="exerciseInput" 
+                  required 
+                  list="exerciseSuggestions"
+                  value=""
+                  placeholder="Nhập tên bài tập (VD: Bài tập 1, Bài 2, Dijkstra, SUM...)"
+                  class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                >
+                <datalist id="exerciseSuggestions">
+                  <option value="Bài tập 1"></option>
+                  <option value="Bài tập 2"></option>
+                  <option value="Bài tập 3"></option>
+                  <option value="Bài 1: Dãy con có tổng lớn nhất (Max Subarray)"></option>
+                  <option value="Bài 2: Tìm đường đi ngắn nhất (Dijkstra / BFS)"></option>
+                  <option value="Bài 3: Quy hoạch động Cái túi (0/1 Knapsack)"></option>
+                  <option value="Bài 4: Xử lý chuỗi Palindrome đối xứng"></option>
+                  <option value="Bài 5: Phân tích số nguyên tố & Sàng Eratosthenes"></option>
+                  <option value="Bài 6: Cây phân đoạn (Segment Tree / BIT)"></option>
+                </datalist>
+              </div>
+              <p class="text-[11px] text-slate-400 mt-1">
+                Gõ trực tiếp tên bài hoặc nhấp chuột để chọn nhanh bài tập mẫu.
+              </p>
+            </div>
+
+            <!-- Trường 4: Tệp mã nguồn (Drag & Drop + File Picker) -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                Tệp mã nguồn (.cpp, .py, .pas, .java, .c, .zip, .rar) <span class="text-rose-500">*</span>
+              </label>
+              
+              <div 
+                id="dropZone" 
+                class="border-2 border-dashed border-slate-200 hover:border-indigo-400 bg-slate-50 hover:bg-indigo-50/30 rounded-xl p-5 text-center cursor-pointer transition flex flex-col items-center justify-center relative"
+              >
+                <input 
+                  type="file" 
+                  id="sourceFile" 
+                  name="sourceFile" 
+                  accept=".cpp,.py,.pas,.java,.c,.zip,.rar" 
+                  class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  required
+                >
+                <div class="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mb-2">
+                  <i data-lucide="file-code" class="w-5 h-5"></i>
+                </div>
+                <p class="text-xs font-medium text-slate-700">
+                  <span class="text-indigo-600 font-semibold">Bấm chọn tệp</span> hoặc kéo thả file vào đây
+                </p>
+                <p class="text-[11px] text-slate-400 mt-1">Giới hạn dung lượng tối đa 10MB</p>
+              </div>
+
+              <!-- Chi tiết file đã chọn -->
+              <div id="fileDetails" class="hidden mt-2 p-3 bg-indigo-50/60 border border-indigo-100 rounded-xl flex items-center justify-between">
+                <div class="flex items-center space-x-2.5 truncate">
+                  <span id="fileBadge" class="px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-indigo-600 text-white">CPP</span>
+                  <div class="truncate">
+                    <p id="fileNameDisplay" class="text-xs font-semibold text-slate-800 truncate"></p>
+                    <p id="fileSizeDisplay" class="text-[11px] text-slate-500"></p>
+                  </div>
+                </div>
+                <button type="button" id="btnRemoveFile" class="text-slate-400 hover:text-rose-600 p-1">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Thanh tiến trình tải lên -->
+            <div id="progressContainer" class="hidden pt-1">
+              <div class="flex justify-between text-xs text-slate-600 mb-1">
+                <span>Đang tải tệp lên Firebase...</span>
+                <span id="progressPercent">0%</span>
+              </div>
+              <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                <div id="progressBar" class="bg-indigo-600 h-full w-0 transition-all duration-150"></div>
+              </div>
+            </div>
+
+            <!-- Nút Nộp Bài -->
+            <button 
+              type="submit" 
+              id="submitBtn" 
+              class="w-full mt-2 py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold text-sm shadow-xs hover:shadow transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <!-- Spinner (mặc định ẩn) -->
+              <svg id="loadingSpinner" class="hidden animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+              </svg>
+              <i id="submitIcon" data-lucide="send" class="w-4 h-4"></i>
+              <span id="submitBtnText">Nộp bài tập</span>
+            </button>
+            
+          </form>
+
+        </div>
+      </section>
+
+      <!-- CỘT PHẢI: DANH SÁCH BÀI ĐÃ NỘP (7 columns) -->
+      <section class="lg:col-span-7">
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
+          
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-4 border-b border-slate-100">
+            <div>
+              <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <i data-lucide="history" class="w-5 h-5 text-indigo-600"></i>
+                Danh Sách Bài Đã Nộp Gần Đây
+              </h2>
+              <p class="text-xs text-slate-500 mt-0.5">Theo dõi lịch sử và tải lại mã nguồn bài tập</p>
+            </div>
+            
+            <div class="flex items-center space-x-2">
+              <span id="submissionCount" class="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-700 rounded-full">
+                0 bài nộp
+              </span>
+            </div>
+          </div>
+
+          <!-- Bộ lọc tìm kiếm nhanh -->
+          <div class="relative mb-4">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+              <i data-lucide="search" class="w-4 h-4"></i>
+            </div>
+            <input 
+              type="text" 
+              id="searchInput" 
+              placeholder="Tìm theo tên học sinh, tên bài tập hoặc ngôn ngữ..." 
+              class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+            >
+          </div>
+
+          <!-- Container danh sách bài nộp -->
+          <div id="submissionsList" class="space-y-3 min-h-[320px]">
+            <!-- Trạng thái đang tải ban đầu -->
+            <div class="py-12 text-center text-slate-400">
+              <div class="animate-spin inline-block w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full mb-2"></div>
+              <p class="text-xs">Đang đồng bộ dữ liệu bài nộp...</p>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Modal Hướng Dẫn Cấu Hình Firebase Rules & CORS -->
+  <div id="rulesModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-slate-200 shadow-2xl p-6">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+        <div class="flex items-center gap-2 text-indigo-600">
+          <i data-lucide="shield-alert" class="w-5 h-5"></i>
+          <h3 class="text-base font-bold text-slate-900">Hướng Dẫn Cấu Hình Firebase Rules &amp; CORS</h3>
+        </div>
+        <button id="btnCloseRulesModal" class="text-slate-400 hover:text-slate-600 p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4 text-xs text-slate-600 leading-relaxed">
+        
+        <!-- Bước 1: Firestore Rules -->
+        <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+          <div class="font-bold text-slate-800 text-sm mb-1 flex items-center gap-1.5">
+            <span class="w-5 h-5 rounded-full bg-indigo-600 text-white text-[11px] flex items-center justify-center">1</span>
+            Cloud Firestore Security Rules
+          </div>
+          <p class="mb-2 text-slate-500">
+            Vào Firebase Console &gt; <strong>Firestore Database</strong> &gt; Tab <strong>Rules</strong>, dán quy tắc sau để cho phép học sinh đọc danh sách và gửi bài mới (nhưng không được xóa/sửa):
+          </p>
+          <pre class="bg-slate-900 text-slate-100 p-3 rounded-lg font-mono text-[11px] overflow-x-auto"><code>rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /submissions/{submissionId} {
+      // Cho phép học sinh xem và nộp bài
+      allow read, create: if true;
+      // Ngăn chặn xóa hoặc sửa đổi dữ liệu đã nộp
+      allow update, delete: if false;
+    }
+  }
+}</code></pre>
+        </div>
+
+        <!-- Bước 2: Firebase Storage Rules -->
+        <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+          <div class="font-bold text-slate-800 text-sm mb-1 flex items-center gap-1.5">
+            <span class="w-5 h-5 rounded-full bg-indigo-600 text-white text-[11px] flex items-center justify-center">2</span>
+            Firebase Storage Security Rules
+          </div>
+          <p class="mb-2 text-slate-500">
+            Vào Firebase Console &gt; <strong>Storage</strong> &gt; Tab <strong>Rules</strong>, dán quy tắc sau (giới hạn tệp mã nguồn dưới 10MB):
+          </p>
+          <pre class="bg-slate-900 text-slate-100 p-3 rounded-lg font-mono text-[11px] overflow-x-auto"><code>rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /submissions/{allPaths=**} {
+      // Cho phép tải xuống và tải lên nếu tệp < 10MB
+      allow read, create: if request.resource.size < 10 * 1024 * 1024;
+      allow update, delete: if false;
+    }
+  }
+}</code></pre>
+        </div>
+
+        <!-- Bước 3: Cấu hình CORS cho Firebase Storage -->
+        <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+          <div class="font-bold text-slate-800 text-sm mb-1 flex items-center gap-1.5">
+            <span class="w-5 h-5 rounded-full bg-indigo-600 text-white text-[11px] flex items-center justify-center">3</span>
+            Khắc phục lỗi CORS khi Upload từ Trình duyệt
+          </div>
+          <p class="mb-2 text-slate-500">
+            Nếu gặp lỗi <em>"Access-Control-Allow-Origin"</em> khi tải file lên Storage, hãy mở Google Cloud Shell hoặc terminal và áp dụng cấu hình CORS:
+          </p>
+          <div class="mb-2">Tạo file <code class="font-mono text-indigo-600 bg-indigo-50 px-1 py-0.5 rounded">cors.json</code>:</div>
+          <pre class="bg-slate-900 text-slate-100 p-3 rounded-lg font-mono text-[11px] overflow-x-auto"><code>[
+  {
+    "origin": ["*"],
+    "method": ["GET", "POST", "PUT", "DELETE", "HEAD"],
+    "maxAgeSeconds": 3600,
+    "responseHeader": ["Content-Type", "Access-Control-Allow-Origin", "x-goog-resumable"]
+  }
+]</code></pre>
+          <div class="mt-2 mb-1">Chạy lệnh sau (thay your-bucket bằng tên bucket của bạn):</div>
+          <pre class="bg-slate-900 text-amber-300 p-2 rounded-lg font-mono text-[11px] overflow-x-auto"><code>gsutil cors set cors.json gs://&lt;your-project-id&gt;.appspot.com</code></pre>
+        </div>
+
+      </div>
+
+      <div class="mt-5 pt-3 border-t border-slate-100 flex justify-end">
+        <button id="btnDismissRulesModal" class="px-4 py-2 bg-indigo-600 text-white font-medium rounded-xl text-xs hover:bg-indigo-700 transition">
+          Đã hiểu, đóng lại
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT FIREBASE MODULAR SDK V10 & LOGIC XỬ LÝ CHÍNH -->
+  <script type="module">
+    // =========================================================================
+    // 1. CẤU HÌNH FIREBASE (FIREBASE CONFIGURATION)
+    // Người dùng chỉ cần thay thế các giá trị bên dưới bằng thông tin từ Firebase Console:
+    // =========================================================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyD-YOUR_FIREBASE_API_KEY_HERE",
+      authDomain: "your-project-id.firebaseapp.com",
+      projectId: "your-project-id",
+      storageBucket: "your-project-id.appspot.com",
+      messagingSenderId: "123456789012",
+      appId: "1:123456789012:web:abcdef1234567890abcdef"
+    };
+
+    // Import Firebase SDK v10 Modular Style từ gstatic CDN
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+    import { 
+      getFirestore, 
+      collection, 
+      addDoc, 
+      deleteDoc,
+      doc,
+      onSnapshot, 
+      query, 
+      orderBy, 
+      limit 
+    } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+    import { 
+      getStorage, 
+      ref, 
+      uploadBytesResumable, 
+      getDownloadURL 
+    } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js';
+
+    // =========================================================================
+    // 2. KHỞI TẠO FIREBASE & XỬ LÝ DỰ PHÒNG (FALLBACK/DEMO MODE)
+    // =========================================================================
+    let db = null;
+    let storage = null;
+    let isLiveFirebase = false;
+
+    // Kiểm tra xem người dùng đã dán thông tin thật chưa
+    const isConfigValid = firebaseConfig.apiKey && 
+      !firebaseConfig.apiKey.includes('YOUR_FIREBASE_API_KEY') && 
+      !firebaseConfig.projectId.includes('your-project-id');
+
+    if (isConfigValid) {
+      try {
+        const app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        storage = getStorage(app);
+        isLiveFirebase = true;
+        
+        // Cập nhật giao diện trạng thái kết nối
+        document.getElementById('statusBadge').className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200';
+        document.getElementById('statusBadge').innerHTML = `
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          <span>Đã kết nối Firebase Cloud</span>
+        `;
+        document.getElementById('demoNotice').classList.add('hidden');
+      } catch (err) {
+        console.warn("Không thể kết nối Firebase với config hiện tại, chuyển sang chế độ Demo:", err);
+      }
+    }
+
+    // =========================================================================
+    // 3. THIẾT LẬP GIÁ TRỊ MẶC ĐỊNH CHO FORM
+    // =========================================================================
+    // Tự động gán thời gian hiện tại vào input datetime-local
+    function initDateTime() {
+      const now = new Date();
+      // Bù trừ múi giờ địa phương để hiển thị chính xác ISO format YYYY-MM-DDTHH:MM
+      const offset = now.getTimezoneOffset() * 60000;
+      const localISOTime = (new Date(now - offset)).toISOString().slice(0, 16);
+      document.getElementById('submittedAt').value = localISOTime;
+    }
+    initDateTime();
+
+
+
+    // =========================================================================
+    // 4. XỬ LÝ FILE MÃ NGUỒN & VALIDATION (ĐUÔI TỆP, KÍCH THƯỚC)
+    // =========================================================================
+    const ALLOWED_EXTENSIONS = ['.cpp', '.py', '.pas', '.java', '.c', '.zip', '.rar'];
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
+    const sourceFileInput = document.getElementById('sourceFile');
+    const fileDetails = document.getElementById('fileDetails');
+    const fileNameDisplay = document.getElementById('fileNameDisplay');
+    const fileSizeDisplay = document.getElementById('fileSizeDisplay');
+    const fileBadge = document.getElementById('fileBadge');
+    const btnRemoveFile = document.getElementById('btnRemoveFile');
+
+    function formatBytes(bytes) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    function getFileExtension(filename) {
+      return filename.slice((filename.lastIndexOf(".") - 1 >>> 0) + 2).toLowerCase();
+    }
+
+    function getBadgeColor(ext) {
+      switch(ext) {
+        case 'cpp':
+        case 'c': return 'bg-blue-600';
+        case 'py': return 'bg-emerald-600';
+        case 'pas': return 'bg-amber-600';
+        case 'java': return 'bg-rose-600';
+        default: return 'bg-purple-600';
+      }
+    }
+
+    function handleFileSelection(file) {
+      if (!file) return;
+
+      const ext = '.' + getFileExtension(file.name);
+      
+      // Kiểm tra định dạng tệp
+      if (!ALLOWED_EXTENSIONS.includes(ext)) {
+        showAlert('Định dạng tệp không hợp lệ!', `Chỉ chấp nhận các tệp mã nguồn: ${ALLOWED_EXTENSIONS.join(', ')}`, 'error');
+        sourceFileInput.value = '';
+        fileDetails.classList.add('hidden');
+        return;
+      }
+
+      // Kiểm tra dung lượng tệp
+      if (file.size > MAX_FILE_SIZE) {
+        showAlert('Tệp quá dung lượng!', `Dung lượng tệp là ${formatBytes(file.size)}, vượt quá giới hạn 10MB cho phép.`, 'error');
+        sourceFileInput.value = '';
+        fileDetails.classList.add('hidden');
+        return;
+      }
+
+      // Hiển thị thông tin tệp
+      const rawExt = getFileExtension(file.name);
+      fileBadge.textContent = rawExt.toUpperCase();
+      fileBadge.className = `px-2 py-0.5 text-[10px] font-bold uppercase rounded text-white ${getBadgeColor(rawExt)}`;
+      fileNameDisplay.textContent = file.name;
+      fileSizeDisplay.textContent = formatBytes(file.size);
+      fileDetails.classList.remove('hidden');
+    }
+
+    sourceFileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      handleFileSelection(file);
+    });
+
+    btnRemoveFile.addEventListener('click', (e) => {
+      e.stopPropagation();
+      sourceFileInput.value = '';
+      fileDetails.classList.add('hidden');
+    });
+
+    // =========================================================================
+    // 5. THÔNG BÁO ALERT (SUCCESS / ERROR)
+    // =========================================================================
+    const alertBox = document.getElementById('alertBox');
+    const alertTitle = document.getElementById('alertTitle');
+    const alertMessage = document.getElementById('alertMessage');
+    const alertIcon = document.getElementById('alertIcon');
+    const alertClose = document.getElementById('alertClose');
+
+    function showAlert(title, message, type = 'success') {
+      alertBox.classList.remove('hidden');
+      alertTitle.textContent = title;
+      alertMessage.textContent = message;
+
+      if (type === 'success') {
+        alertBox.className = 'mb-5 p-4 rounded-xl text-sm border flex items-start gap-3 bg-emerald-50 border-emerald-200 text-emerald-900';
+        alertIcon.setAttribute('data-lucide', 'check-circle');
+      } else {
+        alertBox.className = 'mb-5 p-4 rounded-xl text-sm border flex items-start gap-3 bg-rose-50 border-rose-200 text-rose-900';
+        alertIcon.setAttribute('data-lucide', 'alert-triangle');
+      }
+      lucide.createIcons();
+    }
+
+    alertClose.addEventListener('click', () => {
+      alertBox.classList.add('hidden');
+    });
+
+    // =========================================================================
+    // 6. XỬ LÝ SUBMIT FORM (UPLOAD FILE LÊN STORAGE & METADATA LÊN FIRESTORE)
+    // =========================================================================
+    const submissionForm = document.getElementById('submissionForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const submitBtnText = document.getElementById('submitBtnText');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const submitIcon = document.getElementById('submitIcon');
+    const progressContainer = document.getElementById('progressContainer');
+    const progressBar = document.getElementById('progressBar');
+    const progressPercent = document.getElementById('progressPercent');
+
+    function setLoadingState(isLoading) {
+      if (isLoading) {
+        submitBtn.disabled = true;
+        loadingSpinner.classList.remove('hidden');
+        submitIcon.classList.add('hidden');
+        submitBtnText.textContent = 'Đang tải lên bài tập...';
+        progressContainer.classList.remove('hidden');
+      } else {
+        submitBtn.disabled = false;
+        loadingSpinner.classList.add('hidden');
+        submitIcon.classList.remove('hidden');
+        submitBtnText.textContent = 'Nộp bài tập';
+        progressContainer.classList.add('hidden');
+        progressBar.style.width = '0%';
+        progressPercent.textContent = '0%';
+      }
+    }
+
+    submissionForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const studentName = document.getElementById('studentName').value.trim();
+      const submittedAt = document.getElementById('submittedAt').value;
+      const file = sourceFileInput.files[0];
+
+      if (!studentName) {
+        showAlert('Thiếu thông tin!', 'Vui lòng nhập họ và tên học sinh.', 'error');
+        return;
+      }
+
+      if (!file) {
+        showAlert('Chưa chọn tệp!', 'Vui lòng tải lên tệp mã nguồn bài làm.', 'error');
+        return;
+      }
+
+      const exerciseName = document.getElementById('exerciseInput').value.trim();
+      if (!exerciseName) {
+        showAlert('Thiếu thông tin!', 'Vui lòng nhập tên bài tập.', 'error');
+        return;
+      }
+
+      setLoadingState(true);
+
+      try {
+        const timestamp = Date.now();
+        const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const storagePath = `submissions/${timestamp}_${safeFileName}`;
+
+        let downloadUrl = '#';
+
+        if (isLiveFirebase && storage && db) {
+          // --- TIẾN HÀNH UPLOAD THẬT LÊN FIREBASE STORAGE ---
+          const storageReference = ref(storage, storagePath);
+          const uploadTask = uploadBytesResumable(storageReference, file);
+
+          await new Promise((resolve, reject) => {
+            uploadTask.on(
+              'state_changed',
+              (snapshot) => {
+                const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+                progressBar.style.width = `${progress}%`;
+                progressPercent.textContent = `${progress}%`;
+              },
+              (error) => {
+                console.error("Lỗi upload Firebase Storage:", error);
+                reject(error);
+              },
+              async () => {
+                // Lấy đường dẫn tải xuống sau khi hoàn tất
+                downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+                resolve();
+              }
+            );
+          });
+
+          // --- LƯU METADATA VÀO CLOUD FIRESTORE ---
+          const docData = {
+            studentName: studentName,
+            submittedAt: submittedAt,
+            exerciseName: exerciseName,
+            fileUrl: downloadUrl,
+            fileName: file.name,
+            fileSize: file.size,
+            storagePath: storagePath,
+            createdAt: new Date()
+          };
+
+          await addDoc(collection(db, 'submissions'), docData);
+
+        } else {
+          // --- CHẾ ĐỘ THỬ NGHIỆM LOCAL / DEMO MODE ---
+          // Mô phỏng thanh tiến trình upload
+          for (let p = 15; p <= 100; p += 20) {
+            progressBar.style.width = `${p}%`;
+            progressPercent.textContent = `${p}%`;
+            await new Promise(r => setTimeout(r, 120));
+          }
+
+          // Tạo URL tạm thời bằng Blob để xem lại hoặc tải lại tệp
+          const blobUrl = URL.createObjectURL(file);
+          
+          const localItem = {
+            id: 'local_' + timestamp,
+            studentName: studentName,
+            submittedAt: submittedAt,
+            exerciseName: exerciseName,
+            fileUrl: blobUrl,
+            fileName: file.name,
+            fileSize: file.size,
+            fileExt: '.' + getFileExtension(file.name)
+          };
+
+          saveLocalSubmission(localItem);
+          renderSubmissionsList();
+        }
+
+        showAlert('Nộp bài thành công!', `Bài giải "${file.name}" của học sinh ${studentName} đã được ghi nhận.`, 'success');
+
+        // Reset form nhưng giữ lại tên học sinh để tiện nộp bài tiếp theo
+        sourceFileInput.value = '';
+        fileDetails.classList.add('hidden');
+        initDateTime();
+
+      } catch (error) {
+        console.error("Lỗi khi nộp bài:", error);
+        showAlert(
+          'Nộp bài thất bại!',
+          `Lỗi hệ thống: ${error.message || 'Không thể kết nối Firebase Storage/Firestore'}. Vui lòng kiểm tra lại cấu hình và Security Rules.`,
+          'error'
+        );
+      } finally {
+        setLoadingState(false);
+      }
+    });
+
+    // =========================================================================
+    // 7. DANH SÁCH BÀI ĐÃ NỘP & LẮNG NGHE THỜI GIAN THỰC (REALTIME LISTENER)
+    // =========================================================================
+    const submissionsList = document.getElementById('submissionsList');
+    const submissionCount = document.getElementById('submissionCount');
+    const searchInput = document.getElementById('searchInput');
+
+    let allSubmissions = [];
+
+    function saveLocalSubmission(sub) {
+      try {
+        const existing = JSON.parse(localStorage.getItem('hsg_demo_submissions') || '[]');
+        existing.unshift(sub);
+        localStorage.setItem('hsg_demo_submissions', JSON.stringify(existing));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function getLocalSubmissions() {
+      try {
+        const data = localStorage.getItem('hsg_demo_submissions');
+        if (data) return JSON.parse(data);
+      } catch (e) {}
+      
+      // Dữ liệu mẫu ban đầu
+      return [
+        {
+          id: 'demo-1',
+          studentName: 'Nguyễn Văn An - THPT Chuyên',
+          submittedAt: new Date(Date.now() - 3600000 * 1.5).toISOString().slice(0, 16),
+          exerciseName: 'Bài 1: Dãy con có tổng lớn nhất (Max Subarray)',
+          fileUrl: '#',
+          fileName: 'max_subarray.cpp',
+          fileSize: 1540
+        },
+        {
+          id: 'demo-2',
+          studentName: 'Trần Thị Mai - Lớp 11 Tin',
+          submittedAt: new Date(Date.now() - 3600000 * 5).toISOString().slice(0, 16),
+          exerciseName: 'Bài 2: Tìm đường đi ngắn nhất (Dijkstra / BFS)',
+          fileUrl: '#',
+          fileName: 'dijkstra_solve.py',
+          fileSize: 2280
+        }
+      ];
+    }
+
+    function renderSubmissionsList() {
+      const searchTerm = searchInput.value.toLowerCase().trim();
+      const filtered = allSubmissions.filter(sub => {
+        return (
+          (sub.studentName && sub.studentName.toLowerCase().includes(searchTerm)) ||
+          (sub.exerciseName && sub.exerciseName.toLowerCase().includes(searchTerm)) ||
+          (sub.fileName && sub.fileName.toLowerCase().includes(searchTerm))
+        );
+      });
+
+      submissionCount.textContent = `${filtered.length} bài nộp`;
+
+      if (filtered.length === 0) {
+        submissionsList.innerHTML = `
+          <div class="py-12 text-center text-slate-400 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+            <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 text-slate-300"></i>
+            <p class="text-xs font-medium text-slate-600">Chưa có bài tập nào phù hợp</p>
+            <p class="text-[11px] text-slate-400 mt-0.5">Các bài nộp của học sinh sẽ hiển thị tại đây</p>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      submissionsList.innerHTML = filtered.map(sub => {
+        const ext = getFileExtension(sub.fileName || '');
+        const badgeColor = getBadgeColor(ext);
+        const displayDate = sub.submittedAt ? sub.submittedAt.replace('T', ' ') : 'Vừa xong';
+
+        return `
+          <div class="p-4 rounded-xl border border-slate-200 hover:border-slate-300 bg-white transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+            <div class="flex items-start space-x-3 truncate">
+              <span class="px-2 py-1 text-[10px] font-bold uppercase rounded text-white ${badgeColor} shrink-0 mt-0.5">
+                ${ext || 'CODE'}
+              </span>
+              <div class="truncate">
+                <div class="flex items-center gap-2">
+                  <h4 class="text-xs sm:text-sm font-bold text-slate-900 truncate">${escapeHtml(sub.studentName)}</h4>
+                  <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium shrink-0">
+                    ${formatBytes(sub.fileSize || 0)}
+                  </span>
+                </div>
+                <p class="text-xs text-indigo-600 font-medium truncate mt-0.5">${escapeHtml(sub.exerciseName)}</p>
+                <div class="flex items-center gap-3 text-[11px] text-slate-400 mt-1">
+                  <span class="flex items-center gap-1 font-mono">
+                    <i data-lucide="file" class="w-3 h-3"></i>
+                    ${escapeHtml(sub.fileName)}
+                  </span>
+                  <span>•</span>
+                  <span class="flex items-center gap-1">
+                    <i data-lucide="clock" class="w-3 h-3"></i>
+                    ${displayDate}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 self-end sm:self-center shrink-0">
+              ${sub.fileUrl && sub.fileUrl !== '#' ? `
+                <a 
+                  href="${sub.fileUrl}" 
+                  download="${escapeHtml(sub.fileName)}" 
+                  target="_blank" 
+                  class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-700 font-medium text-xs transition inline-flex items-center gap-1.5"
+                >
+                  <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                  <span>Tải tệp</span>
+                </a>
+              ` : `
+                <span class="px-2.5 py-1 text-[11px] rounded bg-slate-100 text-slate-400 font-mono">
+                  Bản Demo
+                </span>
+              `}
+
+              <!-- Nút Xóa ở cuối mỗi dòng bài nộp -->
+              <button 
+                type="button" 
+                onclick="confirmDeleteSubmission('${sub.id}')" 
+                class="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 font-medium text-xs transition inline-flex items-center gap-1 cursor-pointer border border-rose-200/60"
+                title="Xóa bài nộp này"
+              >
+                <i data-lucide="trash-2" class="w-3.5 h-3.5 text-rose-500"></i>
+                <span class="hidden sm:inline">Xóa</span>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    searchInput.addEventListener('input', renderSubmissionsList);
+
+    // Hàm xóa bài nộp
+    window.confirmDeleteSubmission = async function(id) {
+      const sub = allSubmissions.find(s => s.id === id);
+      const studentName = sub ? sub.studentName : 'học sinh';
+      const exerciseName = sub ? sub.exerciseName : 'bài tập';
+      
+      const isConfirmed = window.confirm(`Bạn có chắc chắn muốn xóa bài nộp này?\n- Học sinh: ${studentName}\n- Bài tập: ${exerciseName}\n\nHành động này không thể hoàn tác.`);
+      if (!isConfirmed) return;
+
+      if (isLiveFirebase && db) {
+        try {
+          await deleteDoc(doc(db, 'submissions', id));
+          showAlert('Đã xóa thành công!', 'Bài nộp đã được xóa khỏi hệ thống.', 'success');
+        } catch (err) {
+          console.error("Lỗi xóa bài nộp:", err);
+          showAlert('Lỗi khi xóa!', 'Không thể xóa bài nộp. Vui lòng kiểm tra Firestore Rules (allow delete: if true).', 'error');
+        }
+      } else {
+        allSubmissions = allSubmissions.filter(s => s.id !== id);
+        try {
+          localStorage.setItem('hsg_demo_submissions', JSON.stringify(allSubmissions));
+        } catch (e) {}
+        renderSubmissionsList();
+        showAlert('Đã xóa!', 'Bài nộp đã được xóa khỏi danh sách.', 'success');
+      }
+    };
+
+    // Lắng nghe dữ liệu
+    if (isLiveFirebase && db) {
+      try {
+        const q = query(collection(db, 'submissions'), orderBy('submittedAt', 'desc'), limit(50));
+        onSnapshot(q, (snapshot) => {
+          allSubmissions = [];
+          snapshot.forEach((doc) => {
+            allSubmissions.push({ id: doc.id, ...doc.data() });
+          });
+          renderSubmissionsList();
+        }, (err) => {
+          console.error("Lỗi Firestore listener:", err);
+          allSubmissions = getLocalSubmissions();
+          renderSubmissionsList();
+        });
+      } catch (e) {
+        console.error(e);
+        allSubmissions = getLocalSubmissions();
+        renderSubmissionsList();
+      }
+    } else {
+      allSubmissions = getLocalSubmissions();
+      renderSubmissionsList();
+    }
+
+    // =========================================================================
+    // 8. ĐIỀU KHIỂN MODAL HƯỚNG DẪN RULES & CORS
+    // =========================================================================
+    const rulesModal = document.getElementById('rulesModal');
+    const btnOpenRulesModal = document.getElementById('btnOpenRulesModal');
+    const btnCloseRulesModal = document.getElementById('btnCloseRulesModal');
+    const btnDismissRulesModal = document.getElementById('btnDismissRulesModal');
+
+    btnOpenRulesModal.addEventListener('click', () => rulesModal.classList.remove('hidden'));
+    btnCloseRulesModal.addEventListener('click', () => rulesModal.classList.add('hidden'));
+    btnDismissRulesModal.addEventListener('click', () => rulesModal.classList.add('hidden'));
+
+    // Khởi tạo icon Lucide ban đầu
+    lucide.createIcons();
+  </script>
+</body>
+</html>

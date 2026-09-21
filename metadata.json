@@ -1,0 +1,6 @@
+{
+  "name": "Cổng Nộp Bài Đội Tuyển HSG Tin Học",
+  "description": "Ứng dụng nộp bài và quản lý bài tập trực tuyến cho đội tuyển Bồi dưỡng Học sinh giỏi môn Tin học tích hợp Firebase Firestore và Storage.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
